@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"errors"
-	"io/ioutil"
 	"encoding/json"
-	"code.google.com/p/goauth2/oauth"
+	"errors"
+	"fmt"
 	"log"
+
+	"code.google.com/p/goauth2/oauth"
 )
 
 func get_primary_email(gd_email_list []interface{}) (string, error) {
@@ -24,42 +24,77 @@ func get_primary_email(gd_email_list []interface{}) (string, error) {
 	return email, nil
 }
 
+type contacts_response struct {
+	Feed struct {
+		Entries entry_list `json:"entry"`
+	} `json:"feed"`
+}
+
+type entry_list []contact_entry
+
+func (list *entry_list) UnmarshalJSON(b []byte) error {
+	// Unmarshal all entries
+	var entries []contact_entry
+	err := json.Unmarshal(b, &entries)
+	if err != nil {
+		return err
+	}
+
+	// Keep only the entries with email
+	for _, v := range entries {
+		if v.Email != "" && v.Name != "" {
+			*list = append(*list, v)
+		}
+	}
+
+	return nil
+}
+
+type contact_entry struct {
+	Email, Name string
+}
+
+func (ce *contact_entry) UnmarshalJSON(b []byte) error {
+	data := make(map[string]interface{})
+
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+
+	gdEmail := data["gd$email"]
+	if gdEmail == nil {
+		ce = nil
+		return nil
+	}
+
+	email, err := get_primary_email(gdEmail.([]interface{}))
+	if err != nil {
+		return err
+	}
+
+	title := data["title"].(map[string]interface{})["$t"]
+	if title != nil && title != "" {
+		ce.Name = title.(string)
+	}
+
+	ce.Email = email
+	return nil
+}
+
 func print_all_contacts(transport *oauth.Transport) {
 	request_url := fmt.Sprintf("https://www.google.com/m8/feeds/contacts/default/thin?alt=json&max-results=10000")
 	// fmt.Println("request_url is", request_url)
 	resp, _ := transport.Client().Get(request_url)
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(body))
-	data := make(map[string]interface{})
-	err := json.Unmarshal(body, &data)
+
+	var result contacts_response
+	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		log.Fatal("Couldn't Unmarshal the response body: ", err)
+		log.Fatal(err)
 	}
-	if data["feed"] == nil {
-		return
-	}
-	feed := data["feed"].(map[string]interface{})
-	if feed["entry"] == nil {
-		fmt.Println("Entry was nil")
-		return
-	}
-	entries := feed["entry"].([]interface{})
-	for i := range entries {
-		this_entry := entries[i].(map[string]interface{})
-		// fmt.Println(this_entry)
-		// fmt.Println()
-		if this_entry["gd$email"] == nil {
-			continue
-		}
-		email, err := get_primary_email(this_entry["gd$email"].([]interface{}))
-		if err != nil {
-			continue
-		}
-		title := this_entry["title"].(map[string]interface{})
-		if title["$t"] != nil && title["$t"] != "" {
-			name := title["$t"].(string)
-			fmt.Printf("%s\t%s\t\n", email, name)
-		}
+
+	for _, v := range result.Feed.Entries {
+		fmt.Printf("%s\t%s\t\n", v.Email, v.Name)
 	}
 }

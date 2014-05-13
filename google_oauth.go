@@ -1,19 +1,16 @@
 package main
 
 import (
-	"fmt"
-	//	"io"
 	"bufio"
-	"io/ioutil"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
-	// "strings"
-	"encoding/json"
+
 	"code.google.com/p/goauth2/oauth"
 )
 
 var requestURL = "https://www.googleapis.com/oauth2/v1/contacts"
-
 
 // To obtain a request token you must specify both -id and -secret.
 //
@@ -22,7 +19,6 @@ var requestURL = "https://www.googleapis.com/oauth2/v1/contacts"
 //
 // Once you have completed the OAuth flow, the credentials should be stored inside
 // the file specified by -cache and you may run without the -id and -secret flags.
-
 
 // Accepts a filename - this is the json file that contains the native client
 // client id, which is the obvious way I've seen so far of enabling this.
@@ -44,62 +40,70 @@ var requestURL = "https://www.googleapis.com/oauth2/v1/contacts"
 // }
 //
 // TODO: unit test
-func get_native_app_client_id(client_id_file string) map[string]interface{} {
-	data := make(map[string]interface{})
-	contents := []byte{}
-	f, err := os.Open(client_id_file)
+
+type client_json struct {
+	Installed client_info `json:"installed"`
+}
+
+type client_info struct {
+	Id                      string   `json:"client_id"`
+	Secret                  string   `json:"client_secret"`
+	Email                   string   `json:"client_email"`
+	AuthUri                 string   `json:"auth_uri"`
+	TokenUri                string   `json:"token_uri"`
+	RedirectUris            []string `json:"redirect_uris"`
+	ClientX509CertUrl       string   `json:"client_x509_cert_url"`
+	AuthProviderX509CertUrl string   `json:"auth_provider_x509_cert_url"`
+
+	Code string `json:"code"` // Not present?
+}
+
+func get_native_app_client_id(filename string) (*client_info, error) {
+	f, err := os.Open(filename)
 	if err != nil {
-		log.Print("While trying to open the application client_id: %s", client_id_file)
-		log.Fatal(err)
+		return nil, err
 	}
-	contents, err = ioutil.ReadAll(f)
-	if err != nil {
-		log.Print("While reader data from the file %s: ", client_id_file)
-		log.Fatal(err)
+	defer f.Close()
+
+	var c client_json
+	if err = json.NewDecoder(f).Decode(&c); err != nil {
+		return nil, err
 	}
-	err = json.Unmarshal(contents, &data)
-	if err != nil {
-		log.Print("While trying to Unmarshall json from the application client_id file %s: ", client_id_file)
-		log.Fatal(err)
-	}
-	// TODO: add json schema checking
-	return data
+
+	return &c.Installed, nil
 }
 
 // Internal function to get a token, using vars defined in get_oauth_token.
 // I need better terminology.
-func get_token(installed map[string]interface{}, cachefile_name string, code string) (*oauth.Transport, *oauth.Token, *oauth.Config, error) {
-	clientId, _     := installed["client_id"].(string)
-	clientSecret, _ := installed["client_secret"].(string)
-
+func get_token(client *client_info, cachefile_name string) (*oauth.Transport, *oauth.Token, *oauth.Config, error) {
 	var (
-		scope      = "https://www.google.com/m8/feeds"
-		authURL    = "https://accounts.google.com/o/oauth2/auth"
-		redirectURL= "urn:ietf:wg:oauth:2.0:oob"
-		tokenURL   = "https://accounts.google.com/o/oauth2/token"
-		cachefile  = cachefile_name
+		scope       = "https://www.google.com/m8/feeds"
+		authURL     = "https://accounts.google.com/o/oauth2/auth"
+		redirectURL = "urn:ietf:wg:oauth:2.0:oob"
+		tokenURL    = "https://accounts.google.com/o/oauth2/token"
+		cachefile   = cachefile_name
 	)
-        config := &oauth.Config{
-                ClientId    :     clientId,
-                ClientSecret: clientSecret,
-                RedirectURL :  redirectURL,
-                Scope	    :        scope,
-                AuthURL	    :      authURL,
-                TokenURL    :     tokenURL,
-                TokenCache  :   oauth.CacheFile(cachefile),
-        }
-        // Set up a Transport using the config.
-        transport := &oauth.Transport{Config: config}
+	config := &oauth.Config{
+		ClientId:     client.Id,
+		ClientSecret: client.Secret,
+		RedirectURL:  redirectURL,
+		Scope:        scope,
+		AuthURL:      authURL,
+		TokenURL:     tokenURL,
+		TokenCache:   oauth.CacheFile(cachefile),
+	}
+	// Set up a Transport using the config.
+	transport := &oauth.Transport{Config: config}
 
-        // Try to pull the token from the cache; if this fails, we need to get one.
-        token, err := config.TokenCache.Token()
-        if err != nil {
-                if clientId == "" || clientSecret == "" {
-                        fmt.Fprint(os.Stderr, "Error in obtaining a token: ", err )
+	// Try to pull the token from the cache; if this fails, we need to get one.
+	token, err := config.TokenCache.Token()
+	if err != nil {
+		if client.Id == "" || client.Secret == "" {
+			fmt.Fprint(os.Stderr, "Error in obtaining a token: ", err)
 			fmt.Print("\n")
 			fmt.Fprint(os.Stderr, "cachefile is: ", cachefile, "\n")
-                        os.Exit(2)
-                }
+			os.Exit(2)
+		}
 		fmt.Println("Err is not nil")
 		fmt.Println("token is ", token)
 		fmt.Println("transport is ", transport)
@@ -108,24 +112,23 @@ func get_token(installed map[string]interface{}, cachefile_name string, code str
 	return transport, token, config, err
 }
 
-func get_oauth_token(client_json string, cachefile_name string) *oauth.Transport {
-	client_info := get_native_app_client_id(client_json)
-	// fmt.Println(client_info)
+func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
+	client, err := get_native_app_client_id(filename)
+	if err != nil {
+		return nil
+	}
 
-	installed := client_info["installed"].(map[string]interface{})
-	code, _   := installed["code"].(string)
-
-	transport, token, config, err := get_token(installed, cachefile_name, code)
-        if err != nil {
-                if code == "" {
-                        // Get an authorization code from the data provider, then continue
-                        // ("Please ask the user if I can access this resource.")
-                        url := config.AuthCodeURL("")
-                        fmt.Println("Visit this URL to get a code, then paste the code here\n")
-                        fmt.Println(url)
+	transport, token, config, err := get_token(client, cachefile_name)
+	if err != nil {
+		if client.Code == "" {
+			// Get an authorization code from the data provider, then continue
+			// ("Please ask the user if I can access this resource.")
+			url := config.AuthCodeURL("")
+			fmt.Println("Visit this URL to get a code, then paste the code here\n")
+			fmt.Println(url)
 			bio := bufio.NewReader(os.Stdin)
 			line, _, _ := bio.ReadLine() // TODO: check err.  Don't worry about hasmoreinline
-			code = string(line)
+			code := string(line)
 			// Exchange the authorization code for an access token.
 			// ("Here's the code you gave the user, now give me a token!")
 			token, err = transport.Exchange(code)
@@ -135,15 +138,15 @@ func get_oauth_token(client_json string, cachefile_name string) *oauth.Transport
 			// (The Exchange method will automatically cache the token.)
 			fmt.Printf("Token is cached in %v\n", config.TokenCache)
 
-			transport, token, config, err = get_token(installed, cachefile_name, code)
+			transport, token, config, err = get_token(client, cachefile_name)
 			if err != nil {
 				log.Fatal("Trying to get the token with a passed in code: ", err)
 			}
-                }
-        }
+		}
+	}
 
-        // Make the actual request using the cached token to authenticate.
-        // ("Here's the token, let me in!")
-        transport.Token = token
+	// Make the actual request using the cached token to authenticate.
+	// ("Here's the token, let me in!")
+	transport.Token = token
 	return transport
 }
