@@ -59,5 +59,9 @@ https://code.google.com/apis/console#access`, rc_dir)
 	// fmt.Println(args)
 	transport := get_oauth_token(string(args["--client-id"].(string)), string(args["--cache"].(string)))
 	// fmt.Println(transport)
-	print_all_contacts(transport)
+	if args["--query"] == nil {
+		print_all_contacts(transport)
+	} else {
+		print_matching_contacts(transport, args["--query"].(string))
+	}
 }

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-
+	"strings"
 	"code.google.com/p/goauth2/oauth"
 )
 
@@ -82,7 +82,8 @@ func (ce *contact_entry) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func print_all_contacts(transport *oauth.Transport) {
+func get_all_contacts(transport *oauth.Transport) contacts_response {
+	// XXX: increase the max-results
 	request_url := fmt.Sprintf("https://www.google.com/m8/feeds/contacts/default/thin?alt=json&max-results=10000")
 	// fmt.Println("request_url is", request_url)
 	resp, _ := transport.Client().Get(request_url)
@@ -93,8 +94,21 @@ func print_all_contacts(transport *oauth.Transport) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	return result
+}
 
+func print_all_contacts(transport *oauth.Transport) {
+	result := get_all_contacts(transport)
 	for _, v := range result.Feed.Entries {
 		fmt.Printf("%s\t%s\t\n", v.Email, v.Name)
+	}
+}
+
+func print_matching_contacts(transport *oauth.Transport, query_str string) {
+	result := get_all_contacts(transport)
+	for _, v := range result.Feed.Entries {
+		if strings.Contains(strings.ToLower(v.Email), strings.ToLower(query_str)) || strings.Contains(strings.ToLower(v.Name), strings.ToLower(query_str))  {
+			fmt.Printf("%s\t%s\t\n", v.Email, v.Name)
+		}
 	}
 }

@@ -99,15 +99,13 @@ func get_token(client *client_info, cachefile_name string) (*oauth.Transport, *o
 	token, err := config.TokenCache.Token()
 	if err != nil {
 		if client.Id == "" || client.Secret == "" {
-			fmt.Fprint(os.Stderr, "Error in obtaining a token: ", err)
-			fmt.Print("\n")
-			fmt.Fprint(os.Stderr, "cachefile is: ", cachefile, "\n")
-			os.Exit(2)
+			log.Printf("Error in obtaining a token: %s\n", err)
+			log.Fatal("cachefile is:  %s\n", cachefile)
 		}
-		fmt.Println("Err is not nil")
-		fmt.Println("token is ", token)
-		fmt.Println("transport is ", transport)
-		fmt.Println("config is ", config)
+		log.Println("Err is not nil")
+		log.Println("token is ", token)
+		log.Println("transport is ", transport)
+		log.Println("config is ", config)
 	}
 	return transport, token, config, err
 }
@@ -142,6 +140,8 @@ func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
 			if err != nil {
 				log.Fatal("Trying to get the token with a passed in code: ", err)
 			}
+		} else {
+			log.Fatal(err)
 		}
 	}
 
