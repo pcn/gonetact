@@ -25,27 +25,36 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
+	"log"
+	"os/user"
 	"github.com/docopt/docopt-go"
 )
 
-var docstring = `Limited interaction with google contacts
+func main() {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal( err )
+	}
+
+	rc_dir := fmt.Sprintf("%s/.gonetact", usr.HomeDir)
+	docstring := fmt.Sprintf(`Limited interaction with google contacts
 
 Usage:
   gonetact [-o] [--client-id=<filename>] [--cache=<cache-file>]
 
 Options:
   -o                        use oauth2 [default: true]
-  --client-id=<filename>    file containing a json client_id [default: client.json]
-  --cache=<filename>        file to cache the access token[default: cache.json]
+  --client-id=<filename>    file containing a json client_id [default: %[1]s/client.json]
+  --cache=<filename>        file to cache the access token[default: %[1]s/cache.json]
   --user=<gmail address>    user whose contacts will be authenticated
   -h --help                 Show this message
 
 The client_id is a file containing a json document per
-https://code.google.com/apis/console#access`
+https://code.google.com/apis/console#access`, rc_dir)
 
-func main() {
 	args, _ := docopt.Parse(docstring, nil, true, "goneact 0.1", false)
+
 	// fmt.Println(args)
 	transport := get_oauth_token(string(args["--client-id"].(string)), string(args["--cache"].(string)))
 	// fmt.Println(transport)
