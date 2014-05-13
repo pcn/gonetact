@@ -46,8 +46,14 @@ type client_json struct {
 }
 
 type client_info struct {
-	Id     string `json:"client_id"`
-	Secret string `json:"client_secret"`
+	Id                      string   `json:"client_id"`
+	Secret                  string   `json:"client_secret"`
+	Email                   string   `json:"client_email"`
+	AuthUri                 string   `json:"auth_uri"`
+	TokenUri                string   `json:"token_uri"`
+	RedirectUris            []string `json:"redirect_uris"`
+	ClientX509CertUrl       string   `json:"client_x509_cert_url"`
+	AuthProviderX509CertUrl string   `json:"auth_provider_x509_cert_url"`
 
 	Code string `json:"code"` // Not present?
 }
