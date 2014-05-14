@@ -44,7 +44,6 @@ Usage:
   gonetact [-o] [--client-id=<filename>] [--cache=<cache-file>] [--query=<query>]
 
 Options:
-  -o                        use oauth2 [default: true]
   --client-id=<filename>    file containing a json client_id [default: %[1]s/client.json]
   --cache=<filename>        file to cache the access token[default: %[1]s/cache.json]
   --user=<gmail address>    user whose contacts will be authenticated
