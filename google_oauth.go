@@ -113,7 +113,7 @@ func get_token(client *client_info, cachefile_name string) (*oauth.Transport, *o
 	return transport, token, config, err
 }
 
-func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
+func get_oauth_token(filename string, cachefile_name string, no_browser bool) *oauth.Transport {
 	client, err := get_native_app_client_id(filename)
 	if err != nil {
 		return nil
@@ -128,8 +128,10 @@ func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
 			fmt.Println("Visit this URL to get a code, then paste the code here\n")
 			fmt.Println(url)
 
-			if err := openUrl(url); err != nil {
-				fmt.Println("Failed to open URL, please visit the page manually")
+			if no_browser != true {
+				if err := openUrl(url); err != nil {
+					fmt.Println("Failed to open URL, please visit the page manually")
+				}
 			}
 
 			fmt.Print("Input code: ")
