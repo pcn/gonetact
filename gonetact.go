@@ -1,27 +1,5 @@
 // -*- golang -*-
 
-// The idea is to provide a daemon that will run alongside my
-// mutt instance, and talk to google to get contacts from my google account.
-// The interface to it will be command-line based, similar to
-// aboot or something similar to that.
-//
-// The workflow will be:
-// * execute
-// ** if there is a token that exists on disk already
-//    in ~/.gonetact-tokencache, use it.
-// *** Connect to google's contacts and query for contacts
-// *** Provide commands to
-// **** Get all contacts
-// **** add a contact (deletes will be up to the web UI
-// ** if not then:
-// *** determine the hostname via either:
-// **** .gonetactrc
-// **** failing the config file, hostname := os.Hostname()
-// *** put an http server on a listening socket
-// *** display a URL to go to which will then ask you to auth to google.
-// *** get the oauth token
-// *** save it to ~/.gonetact-token
-
 package main
 
 import (
