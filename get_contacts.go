@@ -148,7 +148,7 @@ func print_all_contacts(transport *oauth.Transport) {
 func print_matching_contacts(transport *oauth.Transport, query_str string) {
 	all := all_contacts(transport)
 	for line := range all {
-		if strings.Contains(all[line], query_str) {
+		if strings.Contains(strings.ToLower(all[line]), strings.ToLower(query_str)) {
 			fmt.Printf("%s\n", all[line])
 		}
 	}
