@@ -103,7 +103,7 @@ func get_token(client *client_info, cachefile_name string) (*oauth.Transport, *o
 	if err != nil {
 		if client.Id == "" || client.Secret == "" {
 			log.Printf("Error in obtaining a token: %s\n", err)
-			log.Fatal("cachefile is:  %s\n", cachefile)
+			log.Fatalf("cachefile is:  %s\n", cachefile)
 		}
 		log.Println("Err is not nil")
 		log.Println("token is ", token)
@@ -125,7 +125,8 @@ func get_oauth_token(filename string, cachefile_name string, no_browser bool) *o
 			// Get an authorization code from the data provider, then continue
 			// ("Please ask the user if I can access this resource.")
 			url := config.AuthCodeURL("")
-			fmt.Println("Visit this URL to get a code, then paste the code here\n")
+			fmt.Println("Visit this URL to get a code, then paste the code here")
+			fmt.Println()
 			fmt.Println(url)
 
 			if no_browser != true {
