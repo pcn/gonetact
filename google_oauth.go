@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 
 	"code.google.com/p/goauth2/oauth"
 )
@@ -124,9 +127,16 @@ func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
 			url := config.AuthCodeURL("")
 			fmt.Println("Visit this URL to get a code, then paste the code here\n")
 			fmt.Println(url)
+
+			if err := openUrl(url); err != nil {
+				fmt.Println("Failed to open URL, please visit the page manually")
+			}
+
+			fmt.Print("Input code: ")
 			bio := bufio.NewReader(os.Stdin)
 			line, _, _ := bio.ReadLine() // TODO: check err.  Don't worry about hasmoreinline
 			code := string(line)
+
 			// Exchange the authorization code for an access token.
 			// ("Here's the code you gave the user, now give me a token!")
 			token, err = transport.Exchange(code)
@@ -149,4 +159,17 @@ func get_oauth_token(filename string, cachefile_name string) *oauth.Transport {
 	// ("Here's the token, let me in!")
 	transport.Token = token
 	return transport
+}
+
+func openUrl(url string) error {
+	switch runtime.GOOS {
+	case "linux":
+		return exec.Command("xdg-open", url).Start()
+	case "darwin":
+		return exec.Command("open", url).Start()
+	case "windows":
+		return exec.Command("start", url).Start()
+	default:
+		return errors.New("opening links is not supported on the system")
+	}
 }
