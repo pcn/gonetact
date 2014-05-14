@@ -97,26 +97,3 @@ func Test_readCommandLine_4(t *testing.T) {
 		t.Error("The cache-file argument didn't come through per the args we specified.")
 	}
 }
-
-func Test_readCommandLine_5(t *testing.T) {
-	// Test the user argument
-	usr, _ := user.Current()
-	rc_dir := fmt.Sprintf("%s/.gonetact", usr.HomeDir)
-	client_id  := fmt.Sprintf("%s/client.json", rc_dir)
-	cache_file := fmt.Sprintf("%s/cache.json", rc_dir)
-
-	input_argv := []string{"gonetacts",  "--user=eric_schmidt@gmail.com"}
-	expected_output := CmdLineOpts {
-		client_id : client_id,
-		cache_file : cache_file,
-		no_browser : false,
-		username: "eric_schmidt@gmail.com",
-		query: "",
-	}
-	parsed := readCommandLine(input_argv)
-	if expected_output != *parsed {
-		fmt.Println(expected_output)
-		fmt.Println(*parsed)
-		t.Error("The user argument didn't come through per the args we specified.")
-	}
-}
