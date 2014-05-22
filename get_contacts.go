@@ -140,16 +140,28 @@ func all_contacts(transport *oauth.Transport) []string {
 
 func print_all_contacts(transport *oauth.Transport) {
 	all := all_contacts(transport)
-	for line := range all {
-		fmt.Printf("%s\n", all[line])
+	if len(all) < 1 {
+		fmt.Println("No contacts found")
+	} else {
+		for line := range all {
+			fmt.Printf("%s\n", all[line])
+		}
 	}
 }
 
 func print_matching_contacts(transport *oauth.Transport, query_str string) {
 	all := all_contacts(transport)
+	contacts_matched := 0
 	for line := range all {
 		if strings.Contains(strings.ToLower(all[line]), strings.ToLower(query_str)) {
+			if contacts_matched == 0 {
+				fmt.Printf("Gonetact found contacts that matched your query '%s'\n", query_str)
+			}
 			fmt.Printf("%s\n", all[line])
+			contacts_matched++
 		}
+	}
+	if contacts_matched == 0 {
+		fmt.Printf("I couldn't find any contacts that matched the query '%s'\n", query_str)
 	}
 }
